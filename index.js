@@ -17,7 +17,7 @@ const expressServer = app.listen(PORT, () => {
 	console.log(`listening on port ${PORT}`);
 });
 
-// state - add to db later
+// state
 const UsersState = {
 	users: [],
 	setUsers: function (newUsersArray) {
@@ -30,18 +30,18 @@ const io = new Server(expressServer, {
 		origin:
 			process.env.NODE_ENV === 'production'
 				? false
-				: ['http://localhost:5500', 'http://127.0.0.1:5500'],
+				: ['http://localhost:3002', 'http://127.0.0.1:3002'],
 	},
 });
 
 io.on('connection', (socket) => {
 	console.log(`User ${socket.id} connected`);
 
-	// upon connection - only to user
-	socket.emit('message', buildMsg(ADMIN, 'welcome to chat app'));
+	// Upon connection - only to user
+	socket.emit('message', buildMsg(ADMIN, 'Welcome to Chat App!'));
 
 	socket.on('enterRoom', ({name, room}) => {
-		// leave a previous room if they were in another room
+		// leave previous room
 		const prevRoom = getUser(socket.id)?.room;
 
 		if (prevRoom) {
@@ -64,21 +64,18 @@ io.on('connection', (socket) => {
 		// join room
 		socket.join(user.room);
 
-		// to user who joined the room
+		// To user who joined
 		socket.emit(
 			'message',
-			buildMsg(ADMIN, `You have joined the ${user.room} room`),
+			buildMsg(ADMIN, `You have joined the ${user.room} chat room`),
 		);
 
-		// to everyone else
+		// To everyone else
 		socket.broadcast
 			.to(user.room)
 			.emit(
 				'message',
-				buildMsg(
-					ADMIN,
-					`${user.name} has joined the ${user.room} room`,
-				),
+				buildMsg(ADMIN, `${user.name} has joined the room`),
 			);
 
 		// Update user list for room
@@ -86,12 +83,13 @@ io.on('connection', (socket) => {
 			users: getUsersInRoom(user.room),
 		});
 
-		// update room list for everyone
+		// Update rooms list for everyone
 		io.emit('roomList', {
 			rooms: getAllActiveRooms(),
 		});
 	});
 
+	// When user disconnects - to all others
 	socket.on('disconnect', () => {
 		const user = getUser(socket.id);
 		userLeavesApp(socket.id);
@@ -110,10 +108,11 @@ io.on('connection', (socket) => {
 				rooms: getAllActiveRooms(),
 			});
 		}
+
 		console.log(`User ${socket.id} disconnected`);
 	});
 
-	// Listening for message event
+	// Listening for a message event
 	socket.on('message', ({name, text}) => {
 		const room = getUser(socket.id)?.room;
 		if (room) {
@@ -121,6 +120,7 @@ io.on('connection', (socket) => {
 		}
 	});
 
+	// Listen for activity
 	socket.on('activity', (name) => {
 		const room = getUser(socket.id)?.room;
 		if (room) {
